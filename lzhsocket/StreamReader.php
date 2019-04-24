@@ -1,6 +1,6 @@
 <?php
 
-namespace Clue\React\Socks;
+namespace lzhsocket\Socks;
 
 use React\Promise\Deferred;
 use \InvalidArgumentException;
@@ -19,9 +19,9 @@ final class StreamReader
 
     public function write($data)
     {
+
         $this->buffer .= $data;
 
-        // 只要写入数据到本流中，则检查是否达到指定的长度
         do {
             $current = reset($this->queue);
 
@@ -69,20 +69,13 @@ final class StreamReader
         });
     }
 
-    /**
-     * 注意，该方法实现了promise
-     * @param $bytes
-     * @return \React\Promise\Promise|\React\Promise\PromiseInterface
-     */
     public function readLength($bytes)
     {
         $deferred = new Deferred();
         // 读取METHODS 字段长度并返回该字段的值
         $this->readBufferCallback(function (&$buffer) use ($bytes, $deferred) { // 这里加入了回调队列
             if (strlen($buffer) >= $bytes) {
-                // 如果读取到指定长度的数据，则解析成功
                 $deferred->resolve((string)substr($buffer, 0, $bytes));
-                // 清除缓冲区已经读取的数据
                 $buffer = (string)substr($buffer, $bytes);
 
                 return StreamReader::RET_DONE; // 读取到指定的长度
@@ -92,10 +85,6 @@ final class StreamReader
         return $deferred->promise();
     }
 
-    /**
-     * 读取一个字节
-     * @return \React\Promise\Promise|\React\Promise\PromiseInterface
-     */
     public function readByte()
     {
         return $this->readBinary(array(

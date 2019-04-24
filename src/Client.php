@@ -24,12 +24,12 @@ final class Client implements ConnectorInterface
 
     private $protocolVersion = 5;
 
-    private $auth = null;
+    private $auth = null; // 认证用户名称和密码
 
     public function __construct($socksUri, ConnectorInterface $connector)
     {
-        // support `sockss://` scheme for SOCKS over TLS
-        // support `socks+unix://` scheme for Unix domain socket (UDS) paths
+        // 支持 `sockss://` SOCKS over TLS
+        // 支持 `socks+unix://`  Unix domain socket (UDS) 路径
         if (preg_match('/^(socks(?:5|4)?)(s|\+unix):\/\/(.*?@)?(.+?)$/', $socksUri, $match)) {
             // rewrite URI to parse SOCKS scheme, authentication and dummy host
             $socksUri = $match[1] . '://' . $match[3] . 'localhost';
@@ -41,33 +41,33 @@ final class Client implements ConnectorInterface
             );
         }
 
-        // assume default scheme if none is given
+        // 默认协议
         if (strpos($socksUri, '://') === false) {
             $socksUri = 'socks://' . $socksUri;
         }
 
-        // parse URI into individual parts
+        // 解析 URI
         $parts = parse_url($socksUri);
         if (!$parts || !isset($parts['scheme'], $parts['host'])) {
-            throw new \InvalidArgumentException('Invalid SOCKS server URI "' . $socksUri . '"');
+            throw new \InvalidArgumentException('无效的 SOCKS 服务 URI "' . $socksUri . '"');
         }
 
-        // assume default port
+        // 默认端口
         if (!isset($parts['port'])) {
             $parts['port'] = 1080;
         }
 
-        // user or password in URI => SOCKS5 authentication
+        // URI => SOCKS5 身份认证中的用户和密码
         if (isset($parts['user']) || isset($parts['pass'])) {
             if ($parts['scheme'] !== 'socks' && $parts['scheme'] !== 'socks5') {
-                // fail if any other protocol version given explicitly
-                throw new InvalidArgumentException('Authentication requires SOCKS5. Consider using protocol version 5 or waive authentication');
+                // 如果明确给出任何其他协议版本则失败
+                throw new InvalidArgumentException('身份验证需要SOCKS5。 考虑使用协议版本5或放弃身份验证。');
             }
             $parts += array('user' => '', 'pass' => '');
             $this->setAuth(rawurldecode($parts['user']), rawurldecode($parts['pass']));
         }
 
-        // check for valid protocol version from URI scheme
+        // 从URI检查有效的协议版本
         $this->setProtocolVersionFromScheme($parts['scheme']);
 
         $this->socksUri = $parts['host'] . ':' . $parts['port'];
@@ -81,12 +81,12 @@ final class Client implements ConnectorInterface
         } elseif ($scheme === 'socks4') {
             $this->protocolVersion = 4;
         } else {
-            throw new InvalidArgumentException('Invalid protocol version given "' . $scheme . '://"');
+            throw new InvalidArgumentException('无效的协议 "' . $scheme . '://"');
         }
     }
 
     /**
-     * set login data for username/password authentication method (RFC1929)
+     * 设置用户名/密码验证方法的登录数据(RFC1929)
      *
      * @param string $username
      * @param string $password
@@ -95,19 +95,15 @@ final class Client implements ConnectorInterface
     private function setAuth($username, $password)
     {
         if (strlen($username) > 255 || strlen($password) > 255) {
-            throw new InvalidArgumentException('Both username and password MUST NOT exceed a length of 255 bytes each');
+            throw new InvalidArgumentException('用户名和密码不得超过每个255字节的长度');
         }
         $this->auth = pack('C2', 0x01, strlen($username)) . $username . pack('C', strlen($password)) . $password;
     }
 
     /**
-     * Establish a TCP/IP connection to the given target URI through the SOCKS server
+     * 通过SOCKS服务器建立与给定目标URI的TCP / IP连接
      *
-     * Many higher-level networking protocols build on top of TCP. It you're dealing
-     * with one such client implementation,  it probably uses/accepts an instance
-     * implementing ReactPHP's `ConnectorInterface` (and usually its default `Connector`
-     * instance). In this case you can also pass this `Connector` instance instead
-     * to make this client implementation SOCKS-aware. That's it.
+     * 许多更高级别的网络协议都建立在TCP之上。 你正在处理一个这样的客户端实现，它可能使用/接受实现ReactPHP的`ConnectorInterface`的实例（通常是它的默认`Connector`实例）。 在这种情况下，您也可以传递此“Connector”实例而不是实现SOCKS相关接口。
      *
      * @param string $uri
      * @return PromiseInterface Promise<ConnectionInterface,Exception>
@@ -120,61 +116,61 @@ final class Client implements ConnectorInterface
 
         $parts = parse_url($uri);
         if (!$parts || !isset($parts['scheme'], $parts['host'], $parts['port']) || $parts['scheme'] !== 'tcp') {
-            return Promise\reject(new InvalidArgumentException('Invalid target URI specified'));
+            return Promise\reject(new InvalidArgumentException('指定的目标URI无效'));
         }
 
         $host = trim($parts['host'], '[]');
         $port = $parts['port'];
 
         if (strlen($host) > 255 || $port > 65535 || $port < 0 || (string)$port !== (string)(int)$port) {
-            return Promise\reject(new InvalidArgumentException('Invalid target specified'));
+            return Promise\reject(new InvalidArgumentException('指定的目标无效'));
         }
 
-        // construct URI to SOCKS server to connect to
+        // 构造要连接的SOCKS服务器的URI
         $socksUri = $this->socksUri;
 
-        // append path from URI if given
+        // 如果给出，则从URI追加路径
         if (isset($parts['path'])) {
             $socksUri .= $parts['path'];
         }
 
-        // parse query args
+        // 解析查询参数
         $args = array();
         if (isset($parts['query'])) {
             parse_str($parts['query'], $args);
         }
 
-        // append hostname from URI to query string unless explicitly given
+        // 除非明确给出，否则将URI中的主机名附加到查询字符串
         if (!isset($args['hostname'])) {
             $args['hostname'] = $host;
         }
 
-        // append query string
+        // 追加查询字符串
         $socksUri .= '?' . http_build_query($args, '', '&');
 
-        // append fragment from URI if given
+        // 如果给出，则从URI追加片段
         if (isset($parts['fragment'])) {
             $socksUri .= '#' . $parts['fragment'];
         }
 
-        // start TCP/IP connection to SOCKS server
+        // 启动到SOCKS服务器的TCP / IP连接
         $connecting = $this->connector->connect($socksUri);
 
         $deferred = new Deferred(function ($_, $reject) use ($uri, $connecting) {
             $reject(new RuntimeException(
-                'Connection to ' . $uri . ' cancelled while waiting for proxy (ECONNABORTED)',
+                '在等待代理（ECONNABORTED）时连接到 ' . $uri . ' 被取消',
                 defined('SOCKET_ECONNABORTED') ? SOCKET_ECONNABORTED : 103
             ));
 
-            // either close active connection or cancel pending connection attempt
+            // 关闭活动连接或取消挂起连接尝试
             $connecting->then(function (ConnectionInterface $stream) {
                 $stream->close();
             });
             $connecting->cancel();
         });
 
-        // handle SOCKS protocol once connection is ready
-        // resolve plain connection once SOCKS protocol is completed
+        // 连接准备就绪后处理SOCKS协议
+        // SOCKS协议完成后解析普通连接
         $that = $this;
         $connecting->then(
             function (ConnectionInterface $stream) use ($that, $host, $port, $deferred, $uri) {
@@ -182,13 +178,12 @@ final class Client implements ConnectorInterface
             },
             function (Exception $e) use ($uri, $deferred) {
                 $deferred->reject($e = new RuntimeException(
-                    'Connection to ' . $uri . ' failed because connection to proxy failed (ECONNREFUSED)',
+                    '连接到 ' . $uri . ' 失败，因为连接到代理失败 (ECONNREFUSED)',
                     defined('SOCKET_ECONNREFUSED') ? SOCKET_ECONNREFUSED : 111,
                     $e
                 ));
 
-                // avoid garbage references by replacing all closures in call stack.
-                // what a lovely piece of code!
+                // 通过替换调用堆栈中的所有闭包来避免垃圾引用。
                 $r = new \ReflectionProperty('Exception', 'trace');
                 $r->setAccessible(true);
                 $trace = $r->getValue($e);
@@ -207,7 +202,7 @@ final class Client implements ConnectorInterface
     }
 
     /**
-     * Internal helper used to handle the communication with the SOCKS server
+     * 用于处理与SOCKS服务器通信的内部帮助程序
      *
      * @param ConnectionInterface $stream
      * @param string              $host
@@ -220,39 +215,41 @@ final class Client implements ConnectorInterface
     public function handleConnectedSocks(ConnectionInterface $stream, $host, $port, Deferred $deferred, $uri)
     {
         $reader = new StreamReader();
-        $stream->on('data', array($reader, 'write'));
+        $stream->on('data', array($reader, 'write')); // 如果流存在可读数据，则写入到StreamReader中
 
+        // 如果流存在错误，则发出拒绝
         $stream->on('error', $onError = function (Exception $e) use ($deferred, $uri) {
             $deferred->reject(new RuntimeException(
-                'Connection to ' . $uri . ' failed because connection to proxy caused a stream error (EIO)',
+                '连接到 ' . $uri . ' 失败，因为连接到代理引起一个流错误(EIO)',
                 defined('SOCKET_EIO') ? SOCKET_EIO : 5, $e)
             );
         });
 
+        // 如果流关闭，则发出拒绝
         $stream->on('close', $onClose = function () use ($deferred, $uri) {
             $deferred->reject(new RuntimeException(
-                'Connection to ' . $uri . ' failed because connection to proxy was lost while waiting for response from proxy (ECONNRESET)',
+                '连接到 ' . $uri . ' 失败，因为当等待代理响应时连接丢失(ECONNRESET)',
                 defined('SOCKET_ECONNRESET') ? SOCKET_ECONNRESET : 104)
             );
         });
 
-        if ($this->protocolVersion === 5) {
+        if ($this->protocolVersion === 5) { // 处理sockes5协议
             $promise = $this->handleSocks5($stream, $host, $port, $reader, $uri);
         } else {
             $promise = $this->handleSocks4($stream, $host, $port, $reader, $uri);
         }
 
         $promise->then(function () use ($deferred, $stream, $reader, $onError, $onClose) {
-            $stream->removeListener('data', array($reader, 'write'));
+            $stream->removeListener('data', array($reader, 'write')); // 清楚socks协议交互帮助工具
             $stream->removeListener('error', $onError);
             $stream->removeListener('close', $onClose);
 
-            $deferred->resolve($stream);
+            $deferred->resolve($stream); // 连接成功，则返回该流
         }, function (Exception $error) use ($deferred, $stream, $uri) {
-            // pass custom RuntimeException through as-is, otherwise wrap in protocol error
+            // 通过原样传递自定义RuntimeException
             if (!$error instanceof RuntimeException) {
                 $error = new RuntimeException(
-                    'Connection to ' . $uri . ' failed because proxy returned invalid response (EBADMSG)',
+                    '连接到 ' . $uri . ' 失败，因为代理返回无效响应 (EBADMSG)',
                     defined('SOCKET_EBADMSG') ? SOCKET_EBADMSG: 71,
                     $error
                 );
@@ -265,14 +262,14 @@ final class Client implements ConnectorInterface
 
     private function handleSocks4(ConnectionInterface $stream, $host, $port, StreamReader $reader, $uri)
     {
-        // do not resolve hostname. only try to convert to IP
+        // 不解析主机名。 只尝试转换为IP
         $ip = ip2long($host);
 
-        // send IP or (0.0.0.1) if invalid
+        // 发送IP或如果无效（0.0.0.1）
         $data = pack('C2nNC', 0x04, 0x01, $port, $ip === false ? 1 : $ip, 0x00);
 
         if ($ip === false) {
-            // host is not a valid IP => send along hostname (SOCKS4a)
+            // 主机不是有效的IP =>沿主机名发送（SOCKS4a）
             $data .= $host . pack('C', 0x00);
         }
 
@@ -285,11 +282,11 @@ final class Client implements ConnectorInterface
             'ip'     => 'N'
         ))->then(function ($data) use ($uri) {
             if ($data['null'] !== 0x00) {
-                throw new Exception('Invalid SOCKS response');
+                throw new Exception('SOCKS响应无效');
             }
             if ($data['status'] !== 0x5a) {
                 throw new RuntimeException(
-                    'Connection to ' . $uri . ' failed because proxy refused connection with error code ' . sprintf('0x%02X', $data['status']) . ' (ECONNREFUSED)',
+                    '连接到 ' . $uri . ' 失败，因为代理拒绝连接 ' . sprintf('0x%02X', $data['status']) . ' (ECONNREFUSED)',
                     defined('SOCKET_ECONNREFUSED') ? SOCKET_ECONNREFUSED : 111
                 );
             }
@@ -298,31 +295,31 @@ final class Client implements ConnectorInterface
 
     private function handleSocks5(ConnectionInterface $stream, $host, $port, StreamReader $reader, $uri)
     {
-        // protocol version 5
+        // 协议版本5
         $data = pack('C', 0x05);
 
-        $auth = $this->auth;
+        $auth = $this->auth; // 连接授权
         if ($auth === null) {
-            // one method, no authentication
+            // 一种方法，即没有认证
             $data .= pack('C2', 0x01, 0x00);
         } else {
-            // two methods, username/password and no authentication
+            // 两种方法，用户名/密码和没有认证
             $data .= pack('C3', 0x02, 0x02, 0x00);
         }
-        $stream->write($data);
+        $stream->write($data); // 发送协商请求
 
         $that = $this;
 
         return $reader->readBinary(array(
             'version' => 'C',
             'method'  => 'C'
-        ))->then(function ($data) use ($auth, $stream, $reader, $uri) {
+        ))->then(function ($data) use ($auth, $stream, $reader, $uri) { // 读取协商响应并传入
             if ($data['version'] !== 0x05) {
-                throw new Exception('Version/Protocol mismatch');
+                throw new Exception('版本/协议不匹配');
             }
 
             if ($data['method'] === 0x02 && $auth !== null) {
-                // username/password authentication requested and provided
+                // 请求并提供用户名/密码验证
                 $stream->write($auth);
 
                 return $reader->readBinary(array(
@@ -331,33 +328,33 @@ final class Client implements ConnectorInterface
                 ))->then(function ($data) use ($uri) {
                     if ($data['version'] !== 0x01 || $data['status'] !== 0x00) {
                         throw new RuntimeException(
-                            'Connection to ' . $uri . ' failed because proxy denied access with given authentication details (EACCES)',
+                            '连接到 ' . $uri . ' 失败，因为给定的身份认证信息而拒绝访问 (EACCES)',
                             defined('SOCKET_EACCES') ? SOCKET_EACCES : 13
                         );
                     }
                 });
             } else if ($data['method'] !== 0x00) {
-                // any other method than "no authentication"
+                // 除“无认证”之外的任何其他方法
                 throw new RuntimeException(
-                    'Connection to ' . $uri . ' failed because proxy denied access due to unsupported authentication method (EACCES)',
+                    '连接到 ' . $uri . ' 失败，因为不支持的身份验证方法代理拒绝访问 (EACCES)',
                     defined('SOCKET_EACCES') ? SOCKET_EACCES : 13
                 );
             }
         })->then(function () use ($stream, $reader, $host, $port) {
-            // do not resolve hostname. only try to convert to (binary/packed) IP
+            // 不解析主机名。 只尝试转换为（二进制/包）IP
             $ip = @inet_pton($host);
 
             $data = pack('C3', 0x05, 0x01, 0x00);
             if ($ip === false) {
-                // not an IP, send as hostname
+                // 不是IP，作为主机名发送
                 $data .= pack('C2', 0x03, strlen($host)) . $host;
             } else {
-                // send as IPv4 / IPv6
+                // 发送 IPv4 / IPv6
                 $data .= pack('C', (strpos($host, ':') === false) ? 0x01 : 0x04) . $ip;
             }
             $data .= pack('n', $port);
 
-            $stream->write($data);
+            $stream->write($data); // 发起连接请求
 
             return $reader->readBinary(array(
                 'version' => 'C',
@@ -367,74 +364,74 @@ final class Client implements ConnectorInterface
             ));
         })->then(function ($data) use ($reader, $uri) {
             if ($data['version'] !== 0x05 || $data['null'] !== 0x00) {
-                throw new Exception('Invalid SOCKS response');
+                throw new Exception('SOCKS响应无效');
             }
             if ($data['status'] !== 0x00) {
-                // map limited list of SOCKS error codes to common socket error conditions
+                // 将有限的SOCKS错误代码列表映射到常见的套接字错误条件
                 // @link https://tools.ietf.org/html/rfc1928#section-6
                 if ($data['status'] === Server::ERROR_GENERAL) {
                     throw new RuntimeException(
-                        'Connection to ' . $uri . ' failed because proxy refused connection with general server failure (ECONNREFUSED)',
+                        '连接到 ' . $uri . ' 失败，因为一般服务器故障，代理拒绝连接 (ECONNREFUSED)',
                         defined('SOCKET_ECONNREFUSED') ? SOCKET_ECONNREFUSED : 111
                     );
                 } elseif ($data['status'] === Server::ERROR_NOT_ALLOWED_BY_RULESET) {
                     throw new RuntimeException(
-                        'Connection to ' . $uri . ' failed because proxy denied access due to ruleset (EACCES)',
+                        '连接到 ' . $uri . ' 失败，因为代理因规则集而拒绝访问 (EACCES)',
                         defined('SOCKET_EACCES') ? SOCKET_EACCES : 13
                     );
                 } elseif ($data['status'] === Server::ERROR_NETWORK_UNREACHABLE) {
                     throw new RuntimeException(
-                        'Connection to ' . $uri . ' failed because proxy reported network unreachable (ENETUNREACH)',
+                        '连接到 ' . $uri . ' 失败，因为代理报告网络无法访问 (ENETUNREACH)',
                         defined('SOCKET_ENETUNREACH') ? SOCKET_ENETUNREACH : 101
                     );
                 } elseif ($data['status'] === Server::ERROR_HOST_UNREACHABLE) {
                     throw new RuntimeException(
-                        'Connection to ' . $uri . ' failed because proxy reported host unreachable (EHOSTUNREACH)',
+                        '连接到 ' . $uri . ' 失败，因为代理报告主机无法访问 (EHOSTUNREACH)',
                         defined('SOCKET_EHOSTUNREACH') ? SOCKET_EHOSTUNREACH : 113
                     );
                 } elseif ($data['status'] === Server::ERROR_CONNECTION_REFUSED) {
                     throw new RuntimeException(
-                        'Connection to ' . $uri . ' failed because proxy reported connection refused (ECONNREFUSED)',
+                        '连接到 ' . $uri . ' failed because proxy reported connection refused (ECONNREFUSED)',
                         defined('SOCKET_ECONNREFUSED') ? SOCKET_ECONNREFUSED : 111
                     );
                 } elseif ($data['status'] === Server::ERROR_TTL) {
                     throw new RuntimeException(
-                        'Connection to ' . $uri . ' failed because proxy reported TTL/timeout expired (ETIMEDOUT)',
+                        '连接到 ' . $uri . ' 失败，因为代理报告TTL /超时已过期 (ETIMEDOUT)',
                         defined('SOCKET_ETIMEDOUT') ? SOCKET_ETIMEDOUT : 110
                     );
                 } elseif ($data['status'] === Server::ERROR_COMMAND_UNSUPPORTED) {
                     throw new RuntimeException(
-                        'Connection to ' . $uri . ' failed because proxy does not support the CONNECT command (EPROTO)',
+                        '连接到 ' . $uri . ' 失败，因为代理不支持CONNECT命令 (EPROTO)',
                         defined('SOCKET_EPROTO') ? SOCKET_EPROTO : 71
                     );
                 } elseif ($data['status'] === Server::ERROR_ADDRESS_UNSUPPORTED) {
                     throw new RuntimeException(
-                        'Connection to ' . $uri . ' failed because proxy does not support this address type (EPROTO)',
+                        '连接到 ' . $uri . ' 失败，因为代理不支持此地址类型 (EPROTO)',
                         defined('SOCKET_EPROTO') ? SOCKET_EPROTO : 71
                     );
                 }
 
                 throw new RuntimeException(
-                    'Connection to ' . $uri . ' failed because proxy server refused connection with unknown error code ' . sprintf('0x%02X', $data['status']) . ' (ECONNREFUSED)',
+                    '连接到 ' . $uri . ' 失败，因为未知错误代码，代理服务器拒绝连接 ' . sprintf('0x%02X', $data['status']) . ' (ECONNREFUSED)',
                     defined('SOCKET_ECONNREFUSED') ? SOCKET_ECONNREFUSED : 111
                 );
             }
             if ($data['type'] === 0x01) {
-                // IPv4 address => skip IP and port
+                // IPv4 address => skip IP 和端口
                 return $reader->readLength(6);
             } elseif ($data['type'] === 0x03) {
-                // domain name => read domain name length
+                // domain name => 读域名长度
                 return $reader->readBinary(array(
                     'length' => 'C'
                 ))->then(function ($data) use ($reader) {
-                    // skip domain name and port
+                    // 跳过域名和端口
                     return $reader->readLength($data['length'] + 2);
                 });
             } elseif ($data['type'] === 0x04) {
-                // IPv6 address => skip IP and port
+                // IPv6 address => 跳过域名和端口
                 return $reader->readLength(18);
             } else {
-                throw new Exception('Invalid SOCKS reponse: Invalid address type');
+                throw new Exception('SOCKS响应无效：地址类型无效');
             }
         });
     }

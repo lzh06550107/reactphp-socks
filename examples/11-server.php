@@ -16,7 +16,7 @@ $loop = React\EventLoop\Factory::create();
 $server = new Server($loop);
 
 // listen on 127.0.0.1:1080 or first argument
-$socket = new Socket(isset($argv[1]) ? $argv[1] : '127.0.0.1:1080', $loop);
+$socket = new Socket(isset($argv[1]) ? $argv[1] : '127.0.0.1:1081', $loop);
 $server->listen($socket);
 
 echo 'SOCKS server listening on ' . $socket->getAddress() . PHP_EOL;

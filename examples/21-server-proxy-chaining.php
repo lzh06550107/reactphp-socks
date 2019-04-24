@@ -14,18 +14,18 @@ use React\Socket\Connector;
 
 require __DIR__ . '/../vendor/autoload.php';
 
-if (!isset($argv[2])) {
-    echo 'No arguments given! Run with <listen> <proxy1> [<proxyN>...]' . PHP_EOL;
-    echo 'You can add 1..n proxies in the path' . PHP_EOL;
-    exit(1);
-}
+//if (!isset($argv[2])) {
+//    echo 'No arguments given! Run with <listen> <proxy1> [<proxyN>...]' . PHP_EOL;
+//    echo 'You can add 1..n proxies in the path' . PHP_EOL;
+//    exit(1);
+//}
 
-$listen = $argv[1];
-$path = array_slice($argv, 2);
+//$listen = $argv[1];
+//$path = array_slice($argv, 2);
 
 // Alternatively, you can also hard-code these values like this:
-//$listen = '127.0.0.1:9050';
-//$path = array('127.0.0.1:9051', '127.0.0.1:9052', '127.0.0.1:9053');
+$listen = '127.0.0.1:1080';
+$path = array('sockss://35.229.174.18:2333');
 
 $loop = React\EventLoop\Factory::create();
 

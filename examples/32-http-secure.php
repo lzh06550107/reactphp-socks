@@ -14,7 +14,7 @@ use React\Socket\ConnectionInterface;
 
 require __DIR__ . '/../vendor/autoload.php';
 
-$proxy = isset($argv[1]) ? $argv[1] : '127.0.0.1:1080';
+$proxy = isset($argv[1]) ? $argv[1] : '35.229.174.18:2333';
 
 $loop = React\EventLoop\Factory::create();
 
@@ -24,7 +24,7 @@ $client = new Client('sockss://' . $proxy, new Connector($loop, array('tls' => a
 ))));
 $connector = new Connector($loop, array(
     'tcp' => $client,
-    'timeout' => 3.0,
+    'timeout' => 10.0,
     'dns' => false
 ));
 

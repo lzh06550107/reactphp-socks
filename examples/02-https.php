@@ -27,7 +27,7 @@ $connector = new Connector($loop, array(
 
 echo 'Demo SOCKS client connecting to SOCKS server ' . $proxy . PHP_EOL;
 
-$connector->connect('tls://www.google.com:443')->then(function (ConnectionInterface $stream) {
+$connector->connect('tls://www.baidu.com:443')->then(function (ConnectionInterface $stream) {
     echo 'connected' . PHP_EOL;
     $stream->write("GET / HTTP/1.0\r\n\r\n");
     $stream->on('data', function ($data) {

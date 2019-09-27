@@ -1,5 +1,5 @@
 <?php
-namespace Jsq\EncryptionStreams;
+namespace lzhsocket\Socks;
 
 use LogicException;
 

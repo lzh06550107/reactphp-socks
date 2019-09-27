@@ -77,14 +77,15 @@ class EncryptThroughStream extends EventEmitter implements DuplexStreamInterface
         }
 
         if ($this->tool !== null) {
-            try {
-                $data = $this->tool->encrypt($data);
-            } catch (\Exception $e) {
-                $this->emit('error', array($e));
+            echo PHP_EOL.'发送原始数据：'.$data.PHP_EOL;
+            if(!$data = $this->tool->encrypt($data)) {
+                echo PHP_EOL.'加密异常：'.PHP_EOL;
+                $this->emit('error', array($data));
                 $this->close();
 
                 return false;
             }
+            echo PHP_EOL.'加密后数据：'.$data.PHP_EOL;
         }
 
         $this->emit('data', array($data));

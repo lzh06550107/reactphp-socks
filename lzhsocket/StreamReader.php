@@ -1,6 +1,6 @@
 <?php
 
-namespace Clue\React\Socks;
+namespace lzhsocket\Socks;
 
 use React\Promise\Deferred;
 use \InvalidArgumentException;
@@ -19,6 +19,7 @@ final class StreamReader
 
     public function write($data)
     {
+
         $this->buffer .= $data;
 
         do {

@@ -9,19 +9,19 @@
 namespace lzhsocket\Socks;
 
 
-use Clue\React\Socks\RC4;
 use React\Socket\ConnectionInterface;
 use React\Stream\WritableStreamInterface;
 
 class EncryptDecryptConnection implements ConnectionInterface
 {
-    private $connection;
+    public $connection;
     private $encrypt;
 
     public function __construct(ConnectionInterface $connection, $encrypt = null)
     {
         $this->connection = $connection;
-        $this->encrypt = $encrypt??new RC4('diaomao');
+        $this->encrypt = $encrypt??new AES('diaomao');
+
     }
 
     public function getRemoteAddress()
@@ -39,9 +39,8 @@ class EncryptDecryptConnection implements ConnectionInterface
         // 对于读取事件，回调函数需要解密
         if($event == 'data') {
             $listener = function($data)  use($listener){
-                // 调用解密函数进行解密
                 $result = $this->encrypt->decrypt($data);
-                return $listener($result);
+                return call_user_func($listener, $result);
             };
         }
 
@@ -114,4 +113,5 @@ class EncryptDecryptConnection implements ConnectionInterface
     {
         $this->connection->end($data);
     }
+
 }

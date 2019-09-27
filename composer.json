@@ -12,6 +12,7 @@
     ],
     "autoload": {
         "psr-4": {
+            "Clue\\React\\Socks\\": "src/",
             "lzhsocket\\Socks\\": "lzhsocket/"
         }
     },

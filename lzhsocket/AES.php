@@ -10,7 +10,12 @@ namespace lzhsocket\Socks;
 
 /**
  * AES,高级加密标准（英语：Advanced Encryption Standard，缩写：AES），在密码学中又称Rijndael加密法，是美国联邦政府采用的一种区块加密标准。这个标准用来替代原先的DES，已经被多方分析且广为全世界所使用。严格地说，AES的区块长度固定为128 比特，密钥长度则可以是128，192或256比特，包括AES-ECB,AES-CBC,AES-CTR,AES-OFB,AES-CFB
+<<<<<<< HEAD
  * Class AES
+=======
+ *
+ * 这个流加密方法有个缺点，只能进行固定长度的分段加密，加密效率低
+>>>>>>> 2bb2499e15162b492f66c378da1676d8f659e25f
  * @package lzhsocket\Socks
  */
 
@@ -97,7 +102,11 @@ class AES
             } else {
                 echo('数据被修改!');
             }
+<<<<<<< HEAD
             
+=======
+
+>>>>>>> 2bb2499e15162b492f66c378da1676d8f659e25f
         } while($len >= $this->length);
 
         return $result;
